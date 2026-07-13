@@ -3,9 +3,10 @@ import {
   Link2, MessageCircle, ShoppingBag, Music2, Facebook, Instagram,
   Youtube, MapPin, Calendar, Coffee, Briefcase, FileText, Mail,
   Linkedin, BadgeCheck, Sun, QrCode, BarChart3, CreditCard, Store,
-  Check, Sparkles, Phone, ChevronRight, Play, Star,
+  Check, Sparkles, Phone, ChevronRight, Play, Star, Globe,
 } from "lucide-react";
 import { useState } from "react";
+import { LangProvider, useLang } from "../lib/lang-context";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,8 +21,16 @@ export const Route = createFileRoute("/")({
       { name: "twitter:description", content: "Built for Filipino creators, sellers and businesses." },
     ],
   }),
-  component: Landing,
+  component: () => (
+    <LangProvider>
+      <Landing />
+    </LangProvider>
+  ),
 });
+
+function formatPeso(amount: number): string {
+  return `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 function Logo({ className = "" }: { className?: string }) {
   return (
@@ -40,6 +49,7 @@ function Logo({ className = "" }: { className?: string }) {
 function ClaimInline({ size = "md" }: { size?: "md" | "lg" }) {
   const [name, setName] = useState("");
   const navigate = useNavigate();
+  const { t } = useLang();
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const slug = name.trim().toLowerCase().replace(/[^a-z0-9-]/g, "") || "yourname";
@@ -53,30 +63,46 @@ function ClaimInline({ size = "md" }: { size?: "md" | "lg" }) {
         value={name}
         onChange={(e) => setName(e.target.value)}
         className="min-w-0 flex-1 bg-transparent py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-        placeholder="yourname"
+        placeholder={t("yourname", "pangalan mo")}
       />
       <button type="submit" className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90">
-        Claim
+        {t("Claim", "I-claim")}
       </button>
     </form>
   );
 }
 
+function LangToggle() {
+  const { lang, toggle } = useLang();
+  return (
+    <button
+      onClick={toggle}
+      className="flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+      title={lang === "en" ? "Switch to Tagalog" : "Switch to English"}
+    >
+      <Globe className="h-3.5 w-3.5" />
+      {lang === "en" ? "Tagalog" : "English"}
+    </button>
+  );
+}
+
 function Nav() {
+  const { t } = useLang();
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Logo />
         <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
-          <a href="#features" className="hover:text-foreground">Features</a>
-          <a href="#templates" className="hover:text-foreground">Templates</a>
-          <a href="#dashboard" className="hover:text-foreground">Dashboard</a>
-          <a href="#pricing" className="hover:text-foreground">Pricing</a>
+          <a href="#features" className="hover:text-foreground">{t("Features", "Mga Tampok")}</a>
+          <a href="#templates" className="hover:text-foreground">{t("Templates", "Mga Template")}</a>
+          <a href="#dashboard" className="hover:text-foreground">{t("Dashboard", "Dashboard")}</a>
+          <a href="#pricing" className="hover:text-foreground">{t("Pricing", "Presyo")}</a>
         </nav>
         <div className="flex items-center gap-2">
-          <a href="#" className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">Log in</a>
+          <LangToggle />
+          <a href="#" className="hidden text-sm text-muted-foreground hover:text-foreground sm:block">{t("Log in", "Mag-log in")}</a>
           <Link to="/claim/$username" params={{ username: "yourname" }} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 hover:opacity-90">
-            Claim your link
+            {t("Claim your link", "I-claim ang link mo")}
           </Link>
         </div>
       </div>
@@ -99,8 +125,22 @@ export function PhoneFrame({ children, className = "" }: { children: React.React
 }
 
 function LinkRow({
-  icon, label, sub, color = "bg-white", text = "text-zinc-900", subText = "text-zinc-500",
-}: { icon: React.ReactNode; label: string; sub?: string; color?: string; text?: string; subText?: string }) {
+  icon, label, sub, color = "bg-white", text = "text-zinc-900", subText = "text-zinc-500", isPrimary = false,
+}: { icon: React.ReactNode; label: string; sub?: string; color?: string; text?: string; subText?: string; isPrimary?: boolean }) {
+  if (isPrimary) {
+    return (
+      <div className={`flex items-center gap-3 rounded-xl ${color} px-3 py-3.5 shadow-md ring-2 ring-[#0084ff]/30`}>
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#0084ff] text-white">
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className={`truncate text-sm font-bold leading-tight ${text}`}>{label}</div>
+          {sub && <div className={`truncate text-[10px] leading-tight ${subText}`}>{sub}</div>}
+        </div>
+        <ChevronRight className={`h-4 w-4 ${subText}`} />
+      </div>
+    );
+  }
   return (
     <div className={`flex items-center gap-2.5 rounded-xl ${color} px-2.5 py-2 shadow-sm`}>
       <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-zinc-900">
@@ -124,9 +164,10 @@ function PayBadge({ label, bg }: { label: string; bg: string }) {
 }
 
 function PayRow({ labelClass = "text-zinc-500" }: { labelClass?: string }) {
+  const { t } = useLang();
   return (
     <div className="mt-2">
-      <div className={`text-center text-[9px] font-semibold uppercase tracking-wider ${labelClass}`}>We Accept</div>
+      <div className={`text-center text-[9px] font-semibold uppercase tracking-wider ${labelClass}`}>{t("We Accept", "Tanggap Namin")}</div>
       <div className="mt-1.5 grid grid-cols-4 gap-1.5">
         <PayBadge label="GCash" bg="bg-[#007cf0]" />
         <PayBadge label="maya" bg="bg-[#00b16a]" />
@@ -156,7 +197,7 @@ export function ClassicPinoyPhone({ name = "KATWA FINDS", bio = "Trusted deals. 
             <p className="mt-0.5 whitespace-pre-line text-[9px] text-zinc-600">{bio}</p>
           </div>
           <div className="mt-3 space-y-1.5">
-            <LinkRow icon={<MessageCircle className="h-4 w-4 text-[#0084ff]" />} label="Message on Messenger" color="bg-[#0084ff]/10" />
+            <LinkRow icon={<MessageCircle className="h-5 w-5 text-white" />} label="Message on Messenger" color="bg-[#0084ff]" text="text-white" subText="text-white/70" isPrimary />
             <LinkRow icon={<MessageCircle className="h-4 w-4 text-[#25d366]" />} label="WhatsApp" color="bg-[#25d366]/15" />
             <LinkRow icon={<ShoppingBag className="h-4 w-4 text-[#ee4d2d]" />} label="Shopee Store" color="bg-[#ee4d2d]/15" />
             <LinkRow icon={<Music2 className="h-4 w-4" />} label="TikTok Shop" color="bg-zinc-100" />
@@ -193,12 +234,12 @@ function SellerPhone() {
                   <li>✓ Ultra quiet</li>
                   <li>✓ Rechargeable</li>
                 </ul>
-                <div className="mt-0.5 text-[11px] font-extrabold text-[#fb923c]">₱299</div>
+                <div className="mt-0.5 text-[11px] font-extrabold text-[#fb923c]">₱299.00</div>
               </div>
             </div>
           </div>
           <div className="mt-2 space-y-1">
-            <LinkRow icon={<MessageCircle className="h-4 w-4 text-[#0084ff]" />} label="Message on Messenger" />
+            <LinkRow icon={<MessageCircle className="h-5 w-5 text-white" />} label="Message on Messenger" color="bg-[#0084ff]" text="text-white" subText="text-white/70" isPrimary />
             <LinkRow icon={<MessageCircle className="h-4 w-4 text-[#25d366]" />} label="WhatsApp" />
             <LinkRow icon={<ShoppingBag className="h-4 w-4 text-[#ee4d2d]" />} label="Shopee Store" />
             <LinkRow icon={<Music2 className="h-4 w-4" />} label="TikTok Shop" />
@@ -227,7 +268,7 @@ function CreatorPhone() {
             <div className="absolute bottom-1 left-2 text-[8px] font-semibold text-white">NEW VLOG: JAPAN ADVENTURE</div>
           </div>
           <div className="mt-2 space-y-1">
-            <LinkRow icon={<Youtube className="h-4 w-4 text-[#ff0000]" />} label="YouTube Channel" color="bg-[#ff0000]/20" text="text-white" subText="text-white/60" />
+            <LinkRow icon={<Youtube className="h-5 w-5 text-white" />} label="YouTube Channel" color="bg-[#ff0000]" text="text-white" subText="text-white/70" isPrimary />
             <LinkRow icon={<Music2 className="h-4 w-4" />} label="TikTok" color="bg-white/10" text="text-white" subText="text-white/60" />
             <LinkRow icon={<Instagram className="h-4 w-4 text-[#e1306c]" />} label="Instagram" color="bg-gradient-to-r from-[#fdcb52]/40 to-[#e1306c]/40" text="text-white" subText="text-white/60" />
             <LinkRow icon={<Facebook className="h-4 w-4 text-[#1877f2]" />} label="Facebook Page" color="bg-[#1877f2]/25" text="text-white" subText="text-white/60" />
@@ -259,7 +300,7 @@ function BusinessPhone() {
             <p className="mt-0.5 text-[9px] text-white/85">Good coffee. Good food.<br/>Good vibes.</p>
           </div>
           <div className="mt-3 space-y-1.5">
-            <LinkRow icon={<FileText className="h-4 w-4 text-emerald-700" />} label="View Our Menu" sub="Coffee, meals & pastries" />
+            <LinkRow icon={<FileText className="h-5 w-5 text-emerald-700" />} label="View Our Menu" sub="Coffee, meals & pastries" color="bg-white" isPrimary />
             <LinkRow icon={<Calendar className="h-4 w-4 text-emerald-700" />} label="Book a Table" sub="Reserve your spot" />
             <LinkRow icon={<MessageCircle className="h-4 w-4 text-[#0084ff]" />} label="Message Us" sub="We're here to help!" />
             <LinkRow icon={<MapPin className="h-4 w-4 text-rose-500" />} label="Location" sub="Find us here" />
@@ -287,7 +328,7 @@ function ResortPhone() {
             <p className="mt-0.5 text-[9px] text-white/90">Your escape. Your paradise.<br/>San Vicente, Palawan</p>
           </div>
           <div className="mt-3 space-y-1.5">
-            <LinkRow icon={<Calendar className="h-4 w-4 text-sky-500" />} label="Book Your Stay" sub="Best rate guaranteed" />
+            <LinkRow icon={<Calendar className="h-5 w-5 text-white" />} label="Book Your Stay" sub="Best rate guaranteed" color="bg-sky-500" text="text-white" subText="text-white/70" isPrimary />
             <LinkRow icon={<Sun className="h-4 w-4 text-amber-500" />} label="Island Hopping Tours" sub="Explore beautiful places" />
             <LinkRow icon={<MessageCircle className="h-4 w-4 text-[#25d366]" />} label="WhatsApp Concierge" sub="We're here for you" />
             <LinkRow icon={<MapPin className="h-4 w-4 text-rose-500" />} label="Directions" sub="How to get here" />
@@ -314,7 +355,7 @@ function PatrioticPhone() {
             <p className="mt-0.5 text-[9px] text-white/85">Designs that stand out.<br/>Proudly Filipino 🇵🇭</p>
           </div>
           <div className="mt-3 space-y-1.5">
-            <LinkRow icon={<Briefcase className="h-4 w-4 text-[#0038a8]" />} label="View My Portfolio" sub="Selected works" />
+            <LinkRow icon={<Briefcase className="h-5 w-5 text-white" />} label="View My Portfolio" sub="Selected works" color="bg-[#0038a8]" text="text-white" subText="text-white/70" isPrimary />
             <LinkRow icon={<Phone className="h-4 w-4 text-[#0038a8]" />} label="Book a Call" sub="Let's work together" />
             <LinkRow icon={<FileText className="h-4 w-4 text-[#0038a8]" />} label="Services" sub="What I can do for you" />
             <LinkRow icon={<Mail className="h-4 w-4 text-[#0038a8]" />} label="Email Me" sub="Send me a message" />
@@ -337,7 +378,29 @@ const templates = [
   { Comp: PatrioticPhone, name: "PATRIOTIC PINOY", color: "text-[#ff6464]", desc: "Show your pride with Philippine colors and sun." },
 ];
 
+function TrustSignals() {
+  const { t } = useLang();
+  const signals = [
+    { icon: <Check className="h-4 w-4" />, text: t("10,000+ Pinoy creators trust katwa.link", "10,000+ Pinoy creators ang nagtitiwala sa katwa.link") },
+    { icon: <Check className="h-4 w-4" />, text: t("Free forever, no hidden fees", "Libre forever, walang nakatagong bayad") },
+    { icon: <Check className="h-4 w-4" />, text: t("Works with GCash, Maya, Shopee", "Gumagana sa GCash, Maya, Shopee") },
+  ];
+  return (
+    <div className="mt-8 flex flex-wrap gap-4">
+      {signals.map((s, i) => (
+        <div key={i} className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+          <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500/20">
+            {s.icon}
+          </span>
+          {s.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Hero() {
+  const { t } = useLang();
   return (
     <section className="relative overflow-hidden">
       <div className="absolute -left-32 top-0 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
@@ -349,34 +412,38 @@ function Hero() {
       <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:py-24">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Built for the Philippine market 🇵🇭
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {t("Built for the Philippine market", "Gawa para sa Philippine market")} 🇵🇭
           </div>
           <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-            One Link.<br/>
-            <span className="bg-gradient-to-r from-[#60a5fa] via-primary to-[#ef4444] bg-clip-text text-transparent">All Your Channels.</span>
+            {t("One Link.", "Isang Link.")}<br/>
+            <span className="bg-gradient-to-r from-[#60a5fa] via-primary to-[#ef4444] bg-clip-text text-transparent">{t("All Your Channels.", "Lahat ng Channels Mo.")}</span>
           </h1>
           <p className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Built for the way Filipinos connect, chat, and shop online. Messenger, WhatsApp,
-            Shopee, Lazada, TikTok Shop, GCash — all in one beautiful page.
+            {t(
+              "Built for the way Filipinos connect, chat, and shop online. Messenger, WhatsApp, Shopee, Lazada, TikTok Shop, GCash — all in one beautiful page.",
+              "Gawa para sa kung paano nagko-connect, nag-uusap, at namimili ang mga Pilipino online. Messenger, WhatsApp, Shopee, Lazada, TikTok Shop, GCash — lahat sa iisang magandang page."
+            )}
           </p>
 
           <div className="mt-8 max-w-md">
             <ClaimInline size="lg" />
-            <p className="mt-2 text-xs text-muted-foreground">Free forever. No credit card needed.</p>
+            <p className="mt-2 text-xs text-muted-foreground">{t("Free forever. No credit card needed.", "Libre forever. Walang credit card kailangan.")}</p>
           </div>
 
-          <ul className="mt-10 grid gap-3 text-sm sm:grid-cols-2">
+          <TrustSignals />
+
+          <ul className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
             {[
-              "Made for Filipino creators & businesses",
-              "Connect what matters most",
-              "Get more clicks and customers",
-              "Simple. Fast. Pinoy-friendly.",
-            ].map((t) => (
-              <li key={t} className="flex items-center gap-2 text-muted-foreground">
+              t("Made for Filipino creators & businesses", "Gawa para sa Filipino creators at businesses"),
+              t("Connect what matters most", "I-connect ang mahalaga"),
+              t("Get more clicks and customers", "Dami pa ng clicks at customers"),
+              t("Simple. Fast. Pinoy-friendly.", "Simple. Mabilis. Pinoy-friendly."),
+            ].map((item) => (
+              <li key={item} className="flex items-center gap-2 text-muted-foreground">
                 <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500/20 text-emerald-400">
                   <Check className="h-3 w-3" />
                 </span>
-                {t}
+                {item}
               </li>
             ))}
           </ul>
@@ -392,17 +459,18 @@ function Hero() {
 }
 
 function TemplatesSection() {
+  const { t } = useLang();
   return (
     <section id="templates" className="relative border-t border-border/50 py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="text-center">
           <Logo className="justify-center" />
           <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-5xl">
-            Beautiful Templates,{" "}
-            <span className="text-[#60a5fa]">Filipino</span>{" "}
-            <span className="text-[#ef4444]">Style</span>
+            {t("Beautiful Templates,", "Magagandang Templates, ")}
+            <span className="text-[#60a5fa]">{t("Filipino", "Pinoy")}</span>{" "}
+            <span className="text-[#ef4444]">{t("Style", "Style")}</span>
           </h2>
-          <p className="mt-3 text-muted-foreground">Choose a template that fits your vibe. 🇵🇭</p>
+          <p className="mt-3 text-muted-foreground">{t("Choose a template that fits your vibe.", "Pumili ng template na bagay sa vibe mo.")} 🇵🇭</p>
         </div>
 
         <div className="mt-16 grid gap-x-6 gap-y-16 sm:grid-cols-2 lg:grid-cols-3">
@@ -427,7 +495,7 @@ function TemplatesSection() {
 
         <div className="mx-auto mt-16 flex max-w-md items-center justify-center gap-2 rounded-full border border-border bg-card/60 px-4 py-2.5 text-xs text-muted-foreground backdrop-blur">
           <Sparkles className="h-4 w-4 text-primary" />
-          All templates are fully customizable.
+          {t("All templates are fully customizable.", " Lahat ng templates ay fully customizable.")}
         </div>
       </div>
     </section>
@@ -435,20 +503,21 @@ function TemplatesSection() {
 }
 
 function FeaturesSection() {
+  const { t } = useLang();
   const feats = [
-    { Icon: MessageCircle, title: "Messenger First", desc: "Prioritize chat with one tap." },
-    { Icon: CreditCard, title: "Local Payments", desc: "Show your accepted payment methods." },
-    { Icon: Store, title: "Marketplace Links", desc: "Shopee, Lazada, TikTok Shop ready." },
-    { Icon: BadgeCheck, title: "Online Status", desc: "Let customers know you're active." },
-    { Icon: BarChart3, title: "Analytics", desc: "Track clicks and grow your audience." },
-    { Icon: QrCode, title: "QR Code", desc: "Share offline, get more customers." },
+    { Icon: MessageCircle, title: t("Messenger First", "Messenger Muna"), desc: t("Prioritize chat with one tap.", "I-prioritize ang chat sa isang tap.") },
+    { Icon: CreditCard, title: t("Local Payments", "Lokal na Bayaran"), desc: t("Show your accepted payment methods.", "Ipakita ang mga tinatanggap mong bayaran.") },
+    { Icon: Store, title: t("Marketplace Links", "Marketplace Links"), desc: t("Shopee, Lazada, TikTok Shop ready.", "Shopee, Lazada, TikTok Shop ready.") },
+    { Icon: BadgeCheck, title: t("Online Status", "Online Status"), desc: t("Let customers know you're active.", "Paalam sa customers na active ka.") },
+    { Icon: BarChart3, title: t("Analytics", "Analytics"), desc: t("Track clicks and grow your audience.", "I-track ang clicks at palaguin ang audience.") },
+    { Icon: QrCode, title: t("QR Code", "QR Code"), desc: t("Share offline, get more customers.", "I-share offline, dagdagan ang customers.") },
   ];
   return (
     <section id="features" className="relative border-t border-border/50 bg-card/30 py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl">Filipino-First Features</h2>
-          <p className="mt-3 text-muted-foreground">Designed for how Pinoys actually do business online.</p>
+          <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl">{t("Filipino-First Features", "Mga Tampok na Pinoy Muna")}</h2>
+          <p className="mt-3 text-muted-foreground">{t("Designed for how Pinoys actually do business online.", "Ginawa para sa kung paano talaga namimili ang mga Pinoy online.")}</p>
         </div>
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {feats.map(({ Icon, title, desc }) => (
@@ -467,12 +536,13 @@ function FeaturesSection() {
 }
 
 function DashboardSection() {
+  const { t } = useLang();
   return (
     <section id="dashboard" className="relative border-t border-border/50 py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl">Your dashboard, your data.</h2>
-          <p className="mt-3 text-muted-foreground">Track every click and grow your reach.</p>
+          <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl">{t("Your dashboard, your data.", "Ang dashboard mo, ang data mo.")}</h2>
+          <p className="mt-3 text-muted-foreground">{t("Track every click and grow your reach.", "I-track ang bawat click at palaguin ang reach mo.")}</p>
         </div>
 
         <div className="mt-12 overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
@@ -481,12 +551,12 @@ function DashboardSection() {
               <Logo />
               <nav className="mt-6 space-y-1 text-sm">
                 {[
-                  ["Overview", BarChart3, true],
-                  ["Links", Link2, false],
-                  ["Appearance", Sparkles, false],
-                  ["Analytics", BarChart3, false],
-                  ["QR Code", QrCode, false],
-                  ["Settings", Briefcase, false],
+                  [t("Overview", "Overview"), BarChart3, true],
+                  [t("Links", "Links"), Link2, false],
+                  [t("Appearance", "Appearance"), Sparkles, false],
+                  [t("Analytics", "Analytics"), BarChart3, false],
+                  [t("QR Code", "QR Code"), QrCode, false],
+                  [t("Settings", "Settings"), Briefcase, false],
                 ].map(([n, I, active]) => {
                   const Icon = I as typeof BarChart3;
                   return (
@@ -501,21 +571,21 @@ function DashboardSection() {
 
             <div className="p-6 sm:p-8">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">Overview</h3>
-                <div className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground">Last 7 Days ▾</div>
+                <h3 className="text-xl font-bold">{t("Overview", "Overview")}</h3>
+                <div className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground">{t("Last 7 Days", "Huling 7 Araw")} ▾</div>
               </div>
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[
-                  ["Profile Views", "12,458", "+18.6%"],
-                  ["Link Clicks", "8,246", "+21.3%"],
-                  ["Click Through Rate", "66.1%", "+9.2%"],
-                  ["Top Source", "TikTok", "+31.4%"],
+                  [t("Profile Views", "Profile Views"), "12,458", "+18.6%"],
+                  [t("Link Clicks", "Link Clicks"), "8,246", "+21.3%"],
+                  [t("Click Through Rate", "Click Through Rate"), "66.1%", "+9.2%"],
+                  [t("Top Source", "Top Source"), "TikTok", "+31.4%"],
                 ].map(([label, val, delta]) => (
-                  <div key={label} className="rounded-xl border border-border bg-card/50 p-4">
-                    <div className="text-xs text-muted-foreground">{label}</div>
-                    <div className="mt-1 text-2xl font-extrabold tracking-tight">{val}</div>
-                    <div className="mt-1 text-xs text-emerald-400">↑ {delta}</div>
+                  <div key={label as string} className="rounded-xl border border-border bg-card/50 p-4">
+                    <div className="text-xs text-muted-foreground">{label as string}</div>
+                    <div className="mt-1 text-2xl font-extrabold tracking-tight">{val as string}</div>
+                    <div className="mt-1 text-xs text-emerald-400">↑ {delta as string}</div>
                   </div>
                 ))}
               </div>
@@ -523,8 +593,8 @@ function DashboardSection() {
               <div className="mt-6 grid gap-4 lg:grid-cols-2">
                 <div className="rounded-xl border border-border bg-card/50 p-5">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold">Top Links</h4>
-                    <span className="text-xs text-muted-foreground">Clicks</span>
+                    <h4 className="text-sm font-semibold">{t("Top Links", "Top Links")}</h4>
+                    <span className="text-xs text-muted-foreground">{t("Clicks", "Clicks")}</span>
                   </div>
                   <ul className="mt-3 space-y-3 text-sm">
                     {[
@@ -550,8 +620,8 @@ function DashboardSection() {
 
                 <div className="rounded-xl border border-border bg-card/50 p-5">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold">Views Over Time</h4>
-                    <span className="text-xs text-muted-foreground">2,458 on May 14</span>
+                    <h4 className="text-sm font-semibold">{t("Views Over Time", "Views Over Time")}</h4>
+                    <span className="text-xs text-muted-foreground">2,458 {t("on May 14", "noong Mayo 14")}</span>
                   </div>
                   <svg viewBox="0 0 300 120" className="mt-3 h-32 w-full">
                     <defs>
@@ -574,6 +644,7 @@ function DashboardSection() {
 }
 
 function CTASection() {
+  const { t } = useLang();
   return (
     <section id="pricing" className="relative border-t border-border/50 py-20">
       <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
@@ -581,10 +652,10 @@ function CTASection() {
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/30 blur-3xl" />
           <div className="absolute -left-10 -bottom-10 h-40 w-40 rounded-full bg-[#cc1f2d]/20 blur-3xl" />
           <h2 className="relative text-3xl font-extrabold tracking-tight sm:text-5xl">
-            Para sa mga Pinoy, <span className="text-[#60a5fa]">para sa</span> <span className="text-[#ef4444]">Pilipino</span>. 🇵🇭
+            {t("Para sa mga Pinoy, para sa", "Para sa mga Pinoy, para sa")} <span className="text-[#60a5fa]">{t("Pilipino", "Pilipino")}</span>. 🇵🇭
           </h2>
           <p className="relative mt-4 text-muted-foreground">
-            Claim your katwa.link before someone else does.
+            {t("Claim your katwa.link before someone else does.", "I-claim mo na ang katwa.link mo bago ka maunahan.")}
           </p>
           <div className="relative mx-auto mt-8 max-w-md">
             <ClaimInline size="lg" />
@@ -596,11 +667,12 @@ function CTASection() {
 }
 
 function Footer() {
+  const { t } = useLang();
   return (
     <footer className="border-t border-border/50 py-10">
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:px-6 md:flex-row">
         <Logo />
-        <p className="text-xs text-muted-foreground">© 2026 katwa.link — Built with ❤️ in the Philippines.</p>
+        <p className="text-xs text-muted-foreground">© 2026 katwa.link — {t("Built with", "Gawa sa")} ❤️ {t("in the Philippines.", "sa Pilipinas.")}</p>
         <div className="flex gap-4 text-muted-foreground">
           <Facebook className="h-4 w-4" />
           <Instagram className="h-4 w-4" />
